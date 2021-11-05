@@ -6,8 +6,7 @@ dependencies:
   - jupyterlab
   - nodejs
   - ipywidgets
-  - widgetsnbextensio
-  - pythonocc-core
+  - widgetsnbextension
   - pythonocc-utils
   - pythreejs
   - ifcopenshell
