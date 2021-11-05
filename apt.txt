@@ -1,4 +1,1 @@
 libgl1-mesa-glx
-liblaszip-dev
-libopenblas-base
-libpq-dev
