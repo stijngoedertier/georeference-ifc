@@ -7,7 +7,7 @@ dependencies:
   - nodejs
   - ipywidgets
   - widgetsnbextension
-  - pythonocc-utils
+  - pythonocc-core
   - pythreejs
   - ifcopenshell
   - python-graphviz
