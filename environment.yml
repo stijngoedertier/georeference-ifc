@@ -1,0 +1,19 @@
+name: base
+channels:
+  - conda-forge
+dependencies:
+  - python
+  - jupyterlab
+  - nodejs
+  - ipywidgets
+  - widgetsnbextensio
+  - pythonocc-core
+  - pythonocc-utils
+  - pythreejs
+  - ifcopenshell
+  - python-graphviz
+  - pandas
+  - geopandas
+  - shapely
+  - folium
+  

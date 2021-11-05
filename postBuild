@@ -1,0 +1,7 @@
+## ensure you have nodejs install, e.g. with conda
+# conda install -c conda-forge 'nodejs>=12'
+jupyter labextension list
+jupyter labextension install --no-build @jupyter-widgets/jupyterlab-manager
+jupyter labextension install --no-build jupyter-datawidgets/extension
+jupyter labextension install jupyter-threejs
+jupyter labextension list
