@@ -1,1 +1,1 @@
-
+svn checkout --force https://github.com/IfcOpenShell/IfcOpenShell/trunk/src/ifcopenshell-python/ifcopenshell /srv/conda/envs/notebook/lib/python3.7/site-packages/ifcopenshell
