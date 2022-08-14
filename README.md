@@ -280,8 +280,8 @@ m
 
 ## Conclusion
 
-The use of  **IfcProjectedCRS** and **IfcMapConversion** is a unitrusive and precise way of adding geolocation information to an IFC file.
-* This solution does require you to change the local reference system, only to provide information about it.
+The use of **IfcProjectedCRS** and **IfcMapConversion** is a precise and unitrusive way of adding geolocation information to an IFC file.
+* This solution does not require you to change the local reference system, only to provide information about it.
 * It is more accurate compared the use of IfcSite.RefLongitude and IfcSite.RefLatitude in [WGS84](https://epsg.io/4326) coordinates, as a more appropriate geospatial coordinate reference system can be used.
 * BIM tools such as Revit and ArchiCAD already support it.
 * If your BIM tool does not support it, you can use IfcOpenShell to postprocess your IFC prior to exchanging it with third parties.
