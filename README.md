@@ -2,6 +2,8 @@
 
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/stijngoedertier/georeference-ifc/master?labpath=how-to-georeference-ifc-file.ipynb)
 
+Run this notebook on [mybinder.org](](https://mybinder.org/v2/gh/stijngoedertier/georeference-ifc/master?labpath=how-to-georeference-ifc-file.ipynb).
+
 # How to georeference a BIM model
 
 IFC is an open standard for exchanging Building Information Models (BIM).
@@ -69,85 +71,36 @@ for space in spaces:
 threejs_renderer.Display()
 ```
 
-    /opt/conda/lib/python3.9/site-packages/jupyter_client/session.py:716: UserWarning: Message serialization failed with:
-    Out of range float values are not JSON compliant
-    Supporting this message is deprecated in jupyter-client 7, please make sure your message is JSON-compliant
-      content = self.pack(content)
-
-
-
-    HBox(children=(VBox(children=(HBox(children=(Checkbox(value=True, description='Axes', layout=Layout(height='au…
-
-
 ### Write georeference parameters
-Now, let's use IfcOpenShell-python to add geoloation information to the IFC file. As the [Duplex_A_20110907.ifc](./Duplex_A_20110907.ifc) file uses the IFC2x3 schema, we need to add the 'ePSet_MapConversion' and 'ePSet_ProjectedCRS' property sets to the IfcSite object. We will use the OSarch.org [IFC propertyset template](https://wiki.osarch.org/index.php?title=IFC_geolocation) provided on their website.
-
+Now, let's use IfcOpenShell-python to add geoloation information to the IFC file with the function `set_mapconversion_crs()` in [georeference_ifc/main.py](georeference_ifc/main.py).
 
 ```python
-import ifcopenshell
-import ifcopenshell.api
-import ifcopenshell.util.element
-from ifcopenshell.util.element import get_psets
+import georeference_ifc
 
-ifc = ifcopenshell.open('./IFC2X3_Geolocation.ifc')
-map_conversion_template = [t for t in ifc.by_type('IfcPropertySetTemplate') if t.Name == 'EPset_MapConversion'][0]
-crs_template = [t for t in ifc.by_type('IfcPropertySetTemplate') if t.Name == 'EPset_MapConversion'][0]
+georeference_ifc.set_mapconversion_crs(ifc_file=ifc_file,
+                                       target_crs_epsg_code='EPSG:2169',
+                                       eastings=76670.0,
+                                       northings=77179.0,
+                                       orthogonal_height=293.700012207031,
+                                       x_axis_abscissa=0.325568154457152,
+                                       x_axis_ordinate=0.945518575599318,
+                                       scale=1.0)
 
-site = ifc_file.by_type("IfcSite")[0] # we assume that the IfcProject only has one IfcSite entity.
-pset = ifcopenshell.api.run("pset.add_pset", ifc_file, product=site, name="ePSet_MapConversion")
-ifcopenshell.api.run("pset.edit_pset", ifc_file, pset=pset, properties={'Eastings': 76670.0, 
-                                                                        'Northings': 77179.0, 
-                                                                        'OrthogonalHeight': 293.700012207031, 
-                                                                        'XAxisAbscissa': 0.325568154457152, 
-                                                                        'XAxisOrdinate': 0.945518575599318, 
-                                                                        'Scale': 1.0}, 
-                     pset_template=map_conversion_template)
-pset = ifcopenshell.api.run("pset.add_pset", ifc_file, product=site, name="ePSet_ProjectedCRS")
-ifcopenshell.api.run("pset.edit_pset", ifc_file, pset=pset, properties={'Name': 'EPSG:2169'}, 
-                     pset_template=crs_template)
-psets = get_psets(site)
-print(psets)
 ```
-
-    {'ePSet_MapConversion': {'Eastings': 76670.0, 'Northings': 77179.0, 'OrthogonalHeight': 293.700012207031, 'XAxisAbscissa': 0.325568154457152, 'XAxisOrdinate': 0.945518575599318, 'Scale': 1.0}, 'ePSet_ProjectedCRS': {'Name': 'EPSG:2169'}}
 
 
 ### Read georeference information
 
-The below function `map_conversion_crs()` can be used to extract georeferencing information from an IFC file. From XAxisAbscissa and XAxisOrdinate we calculate the rotation.
-
+The function `get_mapconversion_crs()` in [georeference_ifc/main.py](georeference_ifc/main.py) can be used to extract georeferencing information from an IFC file. From XAxisAbscissa and XAxisOrdinate we calculate the rotation.
 
 ```python
-import ifcopenshell.util.pset
-import ifcopenshell.util.geolocation
-from ifcopenshell.util.element import get_psets
+import georeference_ifc
+
+IfcMapConversion, IfcProjectedCRS = georeference_ifc.get_mapconversion_crs(ifc_file=ifc_file)
+
+
 import pandas as pd
 from IPython.display import display
-
-        
-def map_conversion_crs(ifc_file):
-    
-    class Struct:
-        def __init__(self, **entries):
-            self.__dict__.update(entries)
-            
-    map_conversion = None
-    crs = None
-    
-    if ifc_file.schema == 'IFC4':
-        project = ifc_file.by_type("IfcProject")[0]
-        for c in (m for c in project.RepresentationContexts for m in c.HasCoordinateOperation):
-            return c, c.TargetCRS
-    if ifc_file.schema == 'IFC2X3':
-        site = ifc_file.by_type("IfcSite")[0]
-        psets = get_psets(site)
-        if 'ePSet_MapConversion' in psets.keys() and 'ePSet_ProjectedCRS' in psets.keys():
-            return Struct(**psets['ePSet_MapConversion']), Struct(**psets['ePSet_ProjectedCRS'])
-    return map_conversion, crs
-
-        
-IfcMapConversion, IfcProjectedCRS = map_conversion_crs(ifc_file)
-
 df = pd.DataFrame(list(IfcProjectedCRS.__dict__.items()) + list(IfcMapConversion.__dict__.items()), columns= ['property', 'value'])
 display(df)
 
