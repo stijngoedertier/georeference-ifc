@@ -5,6 +5,7 @@ import ifcopenshell.api
 import ifcopenshell.util.element
 import ifcopenshell.util.pset
 from ifcopenshell.util.element import get_psets
+import math
 
 
 def set_mapconversion_crs(ifc_file: ifcopenshell.file,
@@ -55,7 +56,8 @@ def set_mapconversion_crs(ifc_file: ifcopenshell.file,
         If omitted, a value of 1.0 is assumed.
     """
     if ifc_file.schema == 'IFC4':
-        set_mapconversion_crs_ifc4(ifc_file, target_crs_epsg_code, eastings, northings, orthogonal_height, x_axis_abscissa,
+        set_mapconversion_crs_ifc4(ifc_file, target_crs_epsg_code, eastings, northings, orthogonal_height,
+                                   x_axis_abscissa,
                                    x_axis_ordinate, scale)
     if ifc_file.schema == 'IFC2X3':
         set_mapconversion_crs_ifc2x3(ifc_file, target_crs_epsg_code, eastings, northings, orthogonal_height,
@@ -68,12 +70,12 @@ def set_si_units(ifc_file: ifcopenshell.file):
 
     :param ifc_file:
     """
-    lengthunit = ifcopenshell.api.run("unit.add_si_unit", ifc_file, unit_type="LENGTHUNIT", name="METRE", prefix="")
-    areaunit = ifcopenshell.api.run("unit.add_si_unit", ifc_file, unit_type="AREAUNIT", name="SQUARE.METRE", prefix="")
+    lengthunit = ifcopenshell.api.run("unit.add_si_unit", ifc_file, unit_type="LENGTHUNIT", name="METRE", prefix=None)
+    areaunit = ifcopenshell.api.run("unit.add_si_unit", ifc_file, unit_type="AREAUNIT", name="SQUARE_METRE",
+                                    prefix=None)
     volumeunit = ifcopenshell.api.run("unit.add_si_unit", ifc_file, unit_type="VOLUMEUNIT", name="CUBIC_METRE",
-                                      prefix="")
-    planeangleunit = ifcopenshell.api.run("unit.add_conversion_based_unit", name="degree")
-    ifcopenshell.api.run("unit.assign_unit", units=[lengthunit, areaunit, volumeunit, planeangleunit])
+                                      prefix=None)
+    ifcopenshell.api.run("unit.assign_unit", ifc_file, units=[lengthunit, areaunit, volumeunit])
 
 
 def set_mapconversion_crs_ifc4(ifc_file: ifcopenshell.file,
@@ -111,7 +113,8 @@ def set_mapconversion_crs_ifc2x3(ifc_file: ifcopenshell.file,
                                  scale: float) -> None:
     # Open the IFC property set template provided by OSarch.org on https://wiki.osarch.org/index.php?title=File:IFC2X3_Geolocation.ifc
     ifc_template = ifcopenshell.open(os.path.join(os.path.dirname(__file__), './IFC2X3_Geolocation.ifc'))
-    map_conversion_template = [t for t in ifc_template.by_type('IfcPropertySetTemplate') if t.Name == 'EPset_MapConversion'][0]
+    map_conversion_template = \
+        [t for t in ifc_template.by_type('IfcPropertySetTemplate') if t.Name == 'EPset_MapConversion'][0]
     crs_template = [t for t in ifc_template.by_type('IfcPropertySetTemplate') if t.Name == 'EPset_MapConversion'][0]
 
     site = ifc_file.by_type("IfcSite")[0]  # we assume that the IfcProject only has one IfcSite entity.
@@ -127,13 +130,14 @@ def set_mapconversion_crs_ifc2x3(ifc_file: ifcopenshell.file,
     ifcopenshell.api.run("pset.edit_pset", ifc_file, pset=pset, properties={'Name': target_crs_epsg_code},
                          pset_template=crs_template)
 
+
 def get_mapconversion_crs(ifc_file: ifcopenshell.file) -> (object, object):
     """
     This method returns a tuple (IfcMapConversion, IfcProjectedCRS) from an IfcOpenShell file object.
 
         :param ifc_file: ifcopenshell.file
-        the IfcOpenShell file object in which IfcMapConversion information is inserted.
-        :returns
+            the IfcOpenShell file object from which georeference information is read.
+        :returns a tuple of two objects IfcMapConversion, IfcProjectedCRS.
     """
 
     class Struct:
@@ -155,13 +159,12 @@ def get_mapconversion_crs(ifc_file: ifcopenshell.file) -> (object, object):
     return mapconversion, crs
 
 
-if __name__ == '__main__':
-    fn = 'ACT2BIM_corrected.ifc'
-    ifc_file = ifcopenshell.open(fn)
-    set_mapconversion_crs(ifc_file, 'EPSG:2169', 0, 0, 0, 0, 1, 0.0)
-    ifc_file.write('ACT2BIM_corrected_georeferenced.ifc')
+def get_rotation(mapconversion) -> float:
+    """
+    This method calculates the rotation (in degrees) for a given mapconversion data structure,
+    from its XAxisAbscissa and XAxisOrdinate properties.
 
-    fn = 'Duplex_A_20110907.ifc'
-    ifc_file = ifcopenshell.open(fn)
-    set_mapconversion_crs(ifc_file, 'EPSG:2169', 0, 0, 0, 0, 1, 0.0)
-    ifc_file.write('Duplex_A_20110907_georeferenced.ifc')
+        :returns the rotation in degrees along the Z-axis (the axis orthogonal to the earth's surface). For a right-handed
+        coordinate reference system (as required) a postitive rotation angle implies a counter-clockwise rotation.
+    """
+    return math.degrees(math.atan2(mapconversion.XAxisOrdinate, mapconversion.XAxisAbscissa))
